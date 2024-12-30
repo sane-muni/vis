@@ -1,3 +1,5 @@
+basemap
 dash
-plotly
+matplotlib
 pandas
+plotly

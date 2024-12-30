@@ -1,8 +1,14 @@
+import base64
+import io
+
 import dash
+import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
+from mpl_toolkits.basemap import Basemap
+from PIL import Image
 
 # Load the data
 mortality_data = pd.read_csv("data/Mortality.csv", skip_blank_lines=True)
@@ -42,6 +48,36 @@ max_year = max(mortality_data["Year"].max(), incidence_data["Year"].max())
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
+
+# Function to create a U.S. map
+def create_us_map():
+    # Create a Basemap instance for the U.S.
+    fig, ax = plt.subplots(figsize=(8, 6))
+    m = Basemap(
+        projection="merc",
+        llcrnrlat=24,
+        urcrnrlat=50,
+        llcrnrlon=-125,
+        urcrnrlon=-66,
+        resolution="i",
+    )
+
+    # Draw coastlines and country boundaries
+    m.drawcoastlines()
+    m.drawcountries()
+    m.drawstates()
+
+    # Save the map as an image in a BytesIO buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+
+    # Convert the image to base64
+    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    return img_b64
+
+
 # Define the layout of the app
 app.layout = html.Div(
     [
@@ -56,8 +92,24 @@ app.layout = html.Div(
             marks={year: str(year) for year in range(min_year, max_year + 1, 2)},
             tooltip={"placement": "bottom", "always_visible": True},
         ),
-        # Graph for bar chart
-        dcc.Graph(id="bar-chart"),
+        # Create a two-column layout using Flexbox
+        html.Div(
+            [
+                # US Map (Matplotlib image)
+                html.Div(
+                    html.Img(
+                        id="us-map", src=f"data:image/png;base64,{create_us_map()}"
+                    ),
+                    style={"width": "48%", "display": "inline-block"},
+                ),
+                # Graph for bar chart
+                html.Div(
+                    dcc.Graph(id="bar-chart"),
+                    style={"width": "48%", "display": "inline-block", "float": "right"},
+                ),
+            ],
+            style={"display": "flex", "justify-content": "space-between"},
+        ),
     ],
     style={"backgroundColor": "#ffffff"},  # Change background web
 )
