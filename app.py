@@ -94,7 +94,7 @@ def update_chart(selected_year):
             x=combined_data["Age Range"],
             y=combined_data["Count"],
             name="Incidence",
-            marker_color="red",
+            marker_color="#ff7f0e",
         )
     )
 
