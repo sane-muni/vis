@@ -81,47 +81,69 @@ def merge_mortality_with_shapefile():
 
 
 # Function to create a U.S. map with colored states based on selected data type (Mortality or Incidence)
-def create_us_map(selected_year, data_type="incidence"):
-    # Filter the selected data based on the year
-    if data_type == "incidence":
-        filtered_data = incidence_data[incidence_data["Year"] == selected_year]
-        value_column = "Count"
-        state_column = "State"  # Assuming "State" is correct for incidence data
-    elif data_type == "mortality":
-        filtered_data = mortality_data[mortality_data["Year"] == selected_year]
-        value_column = "Deaths"
-        state_column = "State"  # Assuming "State" is correct for mortality data
+# Aggregate data by State and Year, summing the Count or Deaths
+def aggregate_data(data, value_column):
+    return data.groupby(["State", "Year"])[value_column].sum().reset_index()
 
-    # Merge the filtered data with the shapefile
+
+# Aggregate both mortality and incidence data
+incidence_data_aggregated = aggregate_data(incidence_data, "Count")
+mortality_data_aggregated = aggregate_data(mortality_data, "Deaths")
+
+
+# Merge the aggregated data with the shapefile
+def merge_data_with_shapefile(aggregated_data, data_type="incidence"):
+    if data_type == "incidence":
+        value_column = "Count"
+    else:
+        value_column = "Deaths"
+
+    # Merge with the shapefile
     merged_data = gdf.merge(
-        filtered_data, left_on="name", right_on=state_column, how="left"
+        aggregated_data, left_on="name", right_on="State", how="left"
     )
 
     # Drop rows where the value column is NaN (states with no data)
     merged_data = merged_data.dropna(subset=[value_column])
 
-    # Define the color scale based on the value_column (assuming 'value_column' is either 'Incidence' or 'Mortality')
-    if data_type == "incidence":
-        color_scale = "Oranges"
-    elif data_type == "mortality":
-        color_scale = "Greys"
-    else:
-        color_scale = "Viridis"  # Default color scale
+    return merged_data
 
-    # Create a choropleth map using plotly.express
+
+# Example of creating the map with aggregated data
+def create_us_map_with_aggregated_data(selected_year, data_type="incidence"):
+    # Filter the aggregated data by year
+    if data_type == "incidence":
+        filtered_data = incidence_data_aggregated[
+            incidence_data_aggregated["Year"] == selected_year
+        ]
+    else:
+        filtered_data = mortality_data_aggregated[
+            mortality_data_aggregated["Year"] == selected_year
+        ]
+
+    # Merge with the shapefile
+    merged_data = merge_data_with_shapefile(filtered_data, data_type)
+
+    if data_type == "incidence":
+        value_column = "Count"
+        color_scale = "Oranges"
+    else:
+        value_column = "Deaths"
+        color_scale = "Greys"
+
+    # Create the choropleth map
     fig = px.choropleth(
         merged_data,
         geojson=merged_data.geometry,
         locations=merged_data.index,
         color=value_column,
-        color_continuous_scale=color_scale,  # Use the dynamic color scale based on the value_column
+        color_continuous_scale=color_scale,
         hover_name="name",
         hover_data={value_column: True},
         title=f"Number of {data_type.title()} by State in {selected_year}",
         labels={value_column: f"{data_type.title()}"},
     )
 
-    # Update layout for the map
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(
         margin={"r": 0, "t": 40, "l": 0, "b": 0},
@@ -245,8 +267,7 @@ def update_chart(selected_year):
     [Input("year-slider", "value"), Input("data-selector", "value")],
 )
 def update_map(selected_year, data_type):
-    # Return the updated map as a Plotly figure based on the selected data type
-    return create_us_map(selected_year, data_type)
+    return create_us_map_with_aggregated_data(selected_year, data_type)
 
 
 # Run the app
