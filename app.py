@@ -144,6 +144,17 @@ def create_us_map_with_aggregated_data(selected_year, data_type="incidence"):
         labels={value_column: f"{data_type.title()}"},
     )
 
+    # Customize hover to remove index
+    fig.update_traces(
+        customdata=merged_data[[value_column]].values,
+        hovertemplate="<br>".join(
+            [
+                "<b>%{hovertext}</b>",  # Hover name (state)
+                f"{data_type.title()}: %{{customdata[0]:,}}",
+            ]
+        ),
+    )
+
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(
         margin={"r": 0, "t": 40, "l": 0, "b": 0},
