@@ -9,6 +9,7 @@ import geopandas as gpd
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
@@ -86,14 +87,10 @@ def create_us_map(selected_year, data_type="incidence"):
         filtered_data = incidence_data[incidence_data["Year"] == selected_year]
         value_column = "Count"
         state_column = "State"  # Assuming "State" is correct for incidence data
-        cmap = plt.cm.Oranges  # Use the 'Oranges' colormap for mortality data
-        title = f"Cancer Incidence by State in {selected_year}"  # Title for incidence
     elif data_type == "mortality":
         filtered_data = mortality_data[mortality_data["Year"] == selected_year]
         value_column = "Deaths"
         state_column = "State"  # Assuming "State" is correct for mortality data
-        cmap = plt.cm.Greys  # Use the 'Greys' colormap for mortality data
-        title = f"Cancer Deaths by State in {selected_year}"  # Title for mortality
 
     # Merge the filtered data with the shapefile
     merged_data = gdf.merge(
@@ -103,82 +100,70 @@ def create_us_map(selected_year, data_type="incidence"):
     # Drop rows where the value column is NaN (states with no data)
     merged_data = merged_data.dropna(subset=[value_column])
 
-    # Normalize the data for coloring
-    norm = mcolors.Normalize(
-        vmin=merged_data[value_column].min(), vmax=merged_data[value_column].max()
+    # Define the color scale based on the value_column (assuming 'value_column' is either 'Incidence' or 'Mortality')
+    if data_type == "incidence":
+        color_scale = "Oranges"
+    elif data_type == "mortality":
+        color_scale = "Greys"
+    else:
+        color_scale = "Viridis"  # Default color scale
+
+    # Create a choropleth map using plotly.express
+    fig = px.choropleth(
+        merged_data,
+        geojson=merged_data.geometry,
+        locations=merged_data.index,
+        color=value_column,
+        color_continuous_scale=color_scale,  # Use the dynamic color scale based on the value_column
+        hover_name="name",
+        hover_data={value_column: True},
+        title=f"Number of {data_type.title()} by State in {selected_year}",
+        labels={value_column: f"{data_type.title()}"},
     )
 
-    # Create the plot
-    fig, ax = plt.subplots(figsize=(10, 8))
-
-    # Plot the states with color based on the selected data column (Deaths or Count)
-    merged_data.plot(
-        column=value_column,
-        ax=ax,
-        legend=True,
-        cmap=cmap,
-        norm=norm,
-        legend_kwds={
-            "label": f"Number of {value_column.title()} by State",
-            "orientation": "horizontal",
-        },
+    # Update layout for the map
+    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_layout(
+        margin={"r": 0, "t": 40, "l": 0, "b": 0},
+        geo=dict(showland=True, landcolor="white"),
+        template="plotly",
     )
 
-    ax.set_title(title)
-    ax.set_axis_off()
-
-    # Save the map as an image in a BytesIO buffer
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    buf.seek(0)
-
-    # Convert the image to base64
-    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-    return img_b64
+    return fig
 
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
-# Define the layout of the app
-# Define the layout of the app
+# Layout for the app
 app.layout = html.Div(
     [
         html.H1("Cancer Mortality and Incidence Data by Age Range"),
-        # Year Slider
         dcc.Slider(
             id="year-slider",
             min=min_year,
             max=max_year,
-            step=2,  # Set step to 2
-            value=min_year,  # Default value
+            step=1,
+            value=min_year,
             marks={year: str(year) for year in range(min_year, max_year + 1, 2)},
             tooltip={"placement": "bottom", "always_visible": True},
         ),
-        # Dropdown to choose between Mortality and Incidence data
         dcc.Dropdown(
             id="data-selector",
             options=[
                 {"label": "Incidence", "value": "incidence"},
                 {"label": "Mortality", "value": "mortality"},
             ],
-            value="incidence",  # Default value
+            value="incidence",
             style={"width": "48%", "display": "inline-block"},
         ),
-        # Create a two-column layout using Flexbox
         html.Div(
             [
-                # US Map (Matplotlib image)
+                # US Map (Plotly choropleth map)
                 html.Div(
-                    html.Img(
-                        id="us-map",
-                        src=f"data:image/png;base64,{create_us_map(min_year, 'mortality')}",
-                        style={"width": "100%"},
-                    ),
+                    dcc.Graph(id="us-map", style={"width": "100%"}),
                     style={"width": "48%", "display": "inline-block"},
                 ),
-                # Graph for bar chart
                 html.Div(
                     dcc.Graph(id="bar-chart"),
                     style={"width": "48%", "display": "inline-block", "float": "right"},
@@ -187,7 +172,7 @@ app.layout = html.Div(
             style={"display": "flex", "justify-content": "space-between"},
         ),
     ],
-    style={"backgroundColor": "#ffffff"},  # Change background web
+    style={"backgroundColor": "#ffffff"},
 )
 
 
@@ -256,12 +241,12 @@ def update_chart(selected_year):
 
 # Callback to update the US map based on the selected year and data type
 @app.callback(
-    Output("us-map", "src"),
+    Output("us-map", "figure"),
     [Input("year-slider", "value"), Input("data-selector", "value")],
 )
 def update_map(selected_year, data_type):
-    # Return the updated map as a base64-encoded image based on the selected data type
-    return f"data:image/png;base64,{create_us_map(selected_year, data_type)}"
+    # Return the updated map as a Plotly figure based on the selected data type
+    return create_us_map(selected_year, data_type)
 
 
 # Run the app
