@@ -172,23 +172,15 @@ app = dash.Dash(__name__)
 app.layout = html.Div(
     [
         html.H1("Cancer Mortality and Incidence Data by Age Range"),
-        dcc.Slider(
-            id="year-slider",
-            min=min_year,
-            max=max_year,
-            step=1,
-            value=min_year,
-            marks={year: str(year) for year in range(min_year, max_year + 1, 2)},
-            tooltip={"placement": "bottom", "always_visible": True},
-        ),
-        dcc.Dropdown(
+        dcc.RadioItems(
             id="data-selector",
             options=[
                 {"label": "Incidence", "value": "incidence"},
                 {"label": "Mortality", "value": "mortality"},
             ],
             value="incidence",
-            style={"width": "48%", "display": "inline-block"},
+            labelStyle={"display": "inline-block", "margin-right": "10px"},
+            style={"width": "100%"},
         ),
         html.Div(
             [
@@ -203,6 +195,22 @@ app.layout = html.Div(
                 ),
             ],
             style={"display": "flex", "justify-content": "space-between"},
+        ),
+        html.Div(
+            [
+                html.Br(),
+                dcc.Slider(
+                    id="year-slider",
+                    min=min_year,
+                    max=max_year,
+                    step=1,
+                    value=min_year,
+                    marks={
+                        year: str(year) for year in range(min_year, max_year + 1, 2)
+                    },
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+            ]
         ),
     ],
     style={"backgroundColor": "#ffffff"},
