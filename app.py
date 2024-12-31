@@ -171,7 +171,10 @@ app = dash.Dash(__name__)
 # Layout for the app
 app.layout = html.Div(
     [
-        html.H1("Cancer Mortality and Incidence Data by Age Range"),
+        html.H1(
+            "Cancer Mortality and Incidence Data",
+            style={"text-align": "center"},
+        ),
         html.Div(
             [
                 # US Map (Plotly choropleth map)
