@@ -243,18 +243,23 @@ def update_chart(selected_year):
 
     # Group the data by age range and calculate the sum of deaths and incidences
     mortality_by_age = (
-        filtered_mortality_data.groupby("Age Range")
+        filtered_mortality_data.groupby(["Age Range", "Sex"])  # Include "Sex" here
         .agg({"Deaths": "sum"})
         .reset_index()
     )
     incidence_by_age = (
-        filtered_incidence_data.groupby("Age Range").agg({"Count": "sum"}).reset_index()
+        filtered_incidence_data.groupby(["Age Range", "Sex"])  # Include "Sex" here
+        .agg({"Count": "sum"})
+        .reset_index()
     )
 
     # Merge the mortality and incidence data
     combined_data = pd.merge(
-        mortality_by_age, incidence_by_age, on="Age Range", how="outer"
+        mortality_by_age, incidence_by_age, on=["Age Range", "Sex"], how="outer"
     ).fillna(0)
+
+    # Debugging: check the combined data
+    print(combined_data.head())
 
     # Create the bar chart
     fig = go.Figure()
@@ -265,7 +270,7 @@ def update_chart(selected_year):
             x=combined_data["Age Range"],
             y=combined_data["Count"],
             name="Incidence",
-            marker_color="#ff7f0e",
+            marker_color="#ff7f0e",  # Orange for Incidence
         )
     )
 
@@ -274,13 +279,52 @@ def update_chart(selected_year):
             x=combined_data["Age Range"],
             y=combined_data["Deaths"],
             name="Deaths",
-            marker_color="gray",
+            marker_color="gray",  # Gray for Deaths
         )
     )
 
-    # Update layout
+    # Add lines for Incidence trend by gender
+    for gender in ["Female", "Male"]:
+        # Filter data for the gender
+        gender_data = combined_data[combined_data["Sex"] == gender]
+        if not gender_data.empty:
+            # Calculate average incidence per age range by gender
+            avg_incidence = gender_data.groupby("Age Range")["Count"].mean()
+
+            fig.add_trace(
+                go.Scatter(
+                    x=avg_incidence.index,
+                    y=avg_incidence,
+                    mode="lines+markers",
+                    name=f"{gender} Incidence Trend",
+                    line=dict(
+                        color="#FF69B4" if gender == "Female" else "#1f77b4", width=3
+                    ),
+                    legendgroup=f"Incidence_{gender}",
+                )
+            )
+
+            # Calculate average mortality per age range by gender
+            avg_mortality = gender_data.groupby("Age Range")["Deaths"].mean()
+
+            fig.add_trace(
+                go.Scatter(
+                    x=avg_mortality.index,
+                    y=avg_mortality,
+                    mode="lines+markers",
+                    name=f"{gender} Mortality Trend",
+                    line=dict(
+                        color="#FF69B4" if gender == "Female" else "#1f77b4",
+                        width=3,
+                        dash="dot",
+                    ),
+                    legendgroup=f"Mortality_{gender}",
+                )
+            )
+
+    # Update layout for grouped and stacked bars
     fig.update_layout(
-        barmode="group",
+        barmode="group",  # 'group' mode to make bars side by side
         title=f"Cancer Mortality and Incidence in {selected_year}",
         xaxis_title="Age Range",
         yaxis_title="Count",
