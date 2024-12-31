@@ -198,6 +198,7 @@ app.layout = html.Div(
                         "border": "1px solid black",
                     },
                 ),
+                # Bar chart (Plotly bar chart)
                 html.Div(
                     dcc.Graph(id="bar-chart"),
                     style={"width": "48%", "display": "inline-block", "float": "right"},
@@ -208,6 +209,7 @@ app.layout = html.Div(
         html.Div(
             [
                 html.Br(),
+                # Year slider
                 dcc.Slider(
                     id="year-slider",
                     min=min_year,
@@ -224,6 +226,15 @@ app.layout = html.Div(
     ],
     style={"backgroundColor": "#ffffff"},
 )
+
+
+# Callback to update the US map based on the selected year and data type
+@app.callback(
+    Output("us-map", "figure"),
+    [Input("year-slider", "value"), Input("data-selector", "value")],
+)
+def update_map(selected_year, data_type):
+    return create_us_map_with_aggregated_data(selected_year, data_type)
 
 
 # Define callback to update the bar chart based on the selected year
@@ -287,15 +298,6 @@ def update_chart(selected_year):
     )
 
     return fig
-
-
-# Callback to update the US map based on the selected year and data type
-@app.callback(
-    Output("us-map", "figure"),
-    [Input("year-slider", "value"), Input("data-selector", "value")],
-)
-def update_map(selected_year, data_type):
-    return create_us_map_with_aggregated_data(selected_year, data_type)
 
 
 # Run the app
