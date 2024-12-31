@@ -172,22 +172,31 @@ app = dash.Dash(__name__)
 app.layout = html.Div(
     [
         html.H1("Cancer Mortality and Incidence Data by Age Range"),
-        dcc.RadioItems(
-            id="data-selector",
-            options=[
-                {"label": "Incidence", "value": "incidence"},
-                {"label": "Mortality", "value": "mortality"},
-            ],
-            value="incidence",
-            labelStyle={"display": "inline-block", "margin-right": "10px"},
-            style={"width": "100%"},
-        ),
         html.Div(
             [
                 # US Map (Plotly choropleth map)
                 html.Div(
-                    dcc.Graph(id="us-map", style={"width": "100%"}),
-                    style={"width": "48%", "display": "inline-block"},
+                    [
+                        dcc.Graph(id="us-map", style={"width": "100%"}),
+                        dcc.RadioItems(
+                            id="data-selector",
+                            options=[
+                                {"label": "Incidence", "value": "incidence"},
+                                {"label": "Mortality", "value": "mortality"},
+                            ],
+                            value="incidence",
+                            labelStyle={
+                                "display": "inline-block",
+                                "margin-right": "10px",
+                            },
+                            style={"width": "100%"},
+                        ),
+                    ],
+                    style={
+                        "width": "48%",
+                        "display": "inline-block",
+                        "border": "1px solid black",
+                    },
                 ),
                 html.Div(
                     dcc.Graph(id="bar-chart"),
