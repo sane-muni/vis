@@ -1,19 +1,13 @@
-import base64
-import io
-
 import matplotlib
 
 matplotlib.use("Agg")  # Set non-GUI backend
 import dash
 import geopandas as gpd
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
-from PIL import Image
 
 # Load the data
 mortality_data = pd.read_csv("data/Mortality.csv", skip_blank_lines=True)
